@@ -187,7 +187,24 @@ def create_terminal_table(grouped_results: Dict[str, Dict[Backend, BenchmarkResu
 
         improvement_with_indicator = f"{indicator} {row['improvement']}"
 
-        line = f"{row['operation']:<{max_op_width}} │ {row['decred_time']:>8} │ {row['ethereum_time']:>8} │ {improvement_with_indicator:<14}"
+        # Color coding for numbers
+        if row['ratio'] >= 2.0:
+            # Green for significant improvements
+            decred_colored = f"\033[32m{row['decred_time']:>8}\033[0m"
+            ethereum_colored = f"\033[32m{row['ethereum_time']:>8}\033[0m"
+        elif row['ratio'] < 0.9:
+            # Red for regressions
+            decred_colored = f"\033[31m{row['decred_time']:>8}\033[0m"
+            ethereum_colored = f"\033[31m{row['ethereum_time']:>8}\033[0m"
+        else:
+            # Yellow for moderate improvements
+            decred_colored = f"\033[33m{row['decred_time']:>8}\033[0m"
+            ethereum_colored = f"\033[33m{row['ethereum_time']:>8}\033[0m"
+
+        # Bold operation name
+        operation_bold = f"\033[1m{row['operation']}\033[0m"
+
+        line = f"{operation_bold:<{max_op_width + 8}} │ {decred_colored} │ {ethereum_colored} │ {improvement_with_indicator:<14}"
         lines.append(line)
 
     lines.append("")
@@ -203,33 +220,14 @@ def create_terminal_table(grouped_results: Dict[str, Dict[Backend, BenchmarkResu
 
     for row in data_rows:
         alloc_info = f"{row['decred_allocs']}/{row['ethereum_allocs']}"
-        line = f"{row['operation']:<{max_op_width}} │ {row['decred_mem']:>9} │ {row['ethereum_mem']:>9} │ {alloc_info:<8}"
+        # Bold operation name for memory section
+        operation_bold = f"\033[1m{row['operation']}\033[0m"
+        line = f"{operation_bold:<{max_op_width + 8}} │ {row['decred_mem']:>9} │ {row['ethereum_mem']:>9} │ {alloc_info:<8}"
         lines.append(line)
 
     lines.append("")
 
-    # Summary section
-    lines.append("🚀 Performance Summary")
-    lines.append("─" * 25)
-    lines.append("")
-
-    # Top improvements
-    top_improvements = [row for row in data_rows if row['ratio'] >= 1.2][:5]
-    if top_improvements:
-        lines.append("Top Improvements (Ethereum vs Decred):")
-        for row in top_improvements:
-            if row['ratio'] >= 2.0:
-                lines.append(f"  🚀 {row['operation']}: {row['improvement']}")
-            else:
-                lines.append(f"  ⚡ {row['operation']}: {row['improvement']}")
-        lines.append("")
-
-    # Average improvement
-    if data_rows:
-        avg_ratio = sum(row['ratio'] for row in data_rows) / len(data_rows)
-        lines.append(f"Average Performance Improvement: {avg_ratio:.1f}x")
-
-    lines.append("")
+    # Remove the Performance Summary section per user request
 
     return "\n".join(lines)
 
