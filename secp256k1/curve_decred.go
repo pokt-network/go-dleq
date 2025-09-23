@@ -1,3 +1,6 @@
+//go:build !ethereum_secp256k1
+// +build !ethereum_secp256k1
+
 package secp256k1
 
 import (
