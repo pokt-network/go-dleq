@@ -24,8 +24,11 @@ make build_auto
 # Run benchmarks
 make benchmark_all
 
-# Run tests
+# Run tests (both backends)
 make test_all
+
+# Test cross-backend compatibility
+make test_compatibility
 ```
 
 ## Performance
@@ -162,6 +165,19 @@ The Ethereum backend replaces critical operations:
 | `secp256k1.ScalarBaseMultNonConst` | `ethsecp256k1.S256().ScalarBaseMult` |
 | `ecdsa.SignASN1` | `ethsecp256k1.Sign` |
 | `ecdsa.VerifyASN1` | `ethsecp256k1.VerifySignature` |
+
+### Compatibility Testing
+
+Backend consistency is verified through deterministic tests:
+- **Mathematical equivalence:** Same inputs produce identical outputs
+- **Signature correctness:** All backends generate valid signatures
+- **DLEQ proof integrity:** Proofs verify correctly across implementations
+- **Deterministic behavior:** Known test vectors ensure repeatability
+
+```bash
+make test_compatibility           # Run compatibility tests
+go test -run TestBackendCompatibility  # Direct test execution
+```
 
 ### Performance TODOs
 

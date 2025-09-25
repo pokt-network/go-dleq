@@ -12,7 +12,7 @@ help: ## Prints all the targets in all the Makefiles
 	@grep -h -E '^help:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-58s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "\033[1;34m=== 🧪 Testing ===\033[0m"
-	@grep -h -E '^test_all:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-58s\033[0m %s\n", $$1, $$2}'
+	@grep -h -E '^test_(all|compatibility):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-58s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "\033[1;34m=== ⚡ Benchmarking ===\033[0m"
 	@grep -h -E '^benchmark_(all|report):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-58s\033[0m %s\n", $$1, $$2}'
@@ -41,6 +41,11 @@ test_all: ## Run all tests on both backends
 	else \
 		echo "\033[1;33m⚠️  Skipping Ethereum backend tests (CGO not available)\033[0m"; \
 	fi
+
+.PHONY: test_compatibility
+test_compatibility: ## Test backend compatibility and deterministic behavior
+	@echo "🔬 Testing backend compatibility..."
+	@go test -v -run TestBackendCompatibility -run TestCrossBackendResults
 
 ####################
 ### Benchmarking ###

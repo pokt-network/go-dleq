@@ -57,10 +57,10 @@ func main() {
 	if *report || *compare {
 		runComparison(*duration)
 	} else {
-		fmt.Println("Usage: go run cmd/benchmark/main.go -compare|-report")
-		fmt.Println("  -compare  Run full comparison between backends")
-		fmt.Println("  -report   Generate a quick performance report")
-		fmt.Println("  -duration Benchmark duration (default: 3s)")
+		fmt.Println("Usage: go run cmd/benchmark/main.go [options]")
+		fmt.Println("  -compare   Run full comparison between backends")
+		fmt.Println("  -report    Generate a quick performance report")
+		fmt.Println("  -duration  Benchmark duration (default: 3s)")
 	}
 }
 
