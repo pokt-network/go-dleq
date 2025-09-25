@@ -1,91 +1,123 @@
 # go-dleq <!-- omit in toc -->
 
-High-performance cross-group discrete logarithm equality implementation with **pluggable secp256k1 backends** for optimal performance vs portability trade-offs.
+Cross-group discrete logarithm equality implementation per [MRL-0010](https://www.getmonero.org/resources/research-lab/pubs/MRL-0010.pdf) with **dual secp256k1 backends** for 3x performance gains.
 
 - [Overview](#overview)
-- [Performance Backends](#performance-backends)
-  - [Comparison](#comparison)
-  - [Build Instructions](#build-instructions)
-    - [Default (Decred Backend)](#default-decred-backend)
-    - [High-Performance (Ethereum Backend)](#high-performance-ethereum-backend)
-  - [Benchmark Results](#benchmark-results)
-- [Usage](#usage)
-- [Backend Selection Guide](#backend-selection-guide)
+- [Quick Start](#quick-start)
+- [Performance](#performance)
+- [Backend Selection](#backend-selection)
+- [API Usage](#api-usage)
 - [Technical Details](#technical-details)
 
 ## Overview
 
-This repo contains an implementation of cross-group discrete logarithm equality as specified in [MRL-0010](https://www.getmonero.org/resources/research-lab/pubs/MRL-0010.pdf). In addition to what's specified in the paper, it contains an additional proof of knowledge of the witness ie. a signature on both curves. Currently, secp256k1 and ed25519 are supported. The library is written such that other curves can be added.
+Implementation of cross-group discrete logarithm equality with proof of knowledge signatures on both curves. Supports secp256k1 and ed25519.
 
-**🚀 NEW: Dual Backend Architecture** - This fork adds a high-performance Ethereum secp256k1 backend alongside the original Decred implementation, providing up to **3x faster operations** for ring signature workloads.
+**Key Feature:** Pluggable secp256k1 backends - choose between portability (pure Go) or **3x performance** (libsecp256k1).
 
-## Performance Backends
-
-⚠️ **Backend selection is BUILD-TIME, not runtime configuration** ⚠️
-
-### Comparison
-
-| Backend              | Build Requirements | Performance             | Memory             | Portability          |
-| -------------------- | ------------------ | ----------------------- | ------------------ | -------------------- |
-| **Decred (Default)** | Pure Go, no CGO    | Excellent baseline      | 136 B/op, 2 allocs | Runs anywhere        |
-| **Ethereum**         | CGO + libsecp256k1 | **3x faster ScalarMul** | 336 B/op, 8 allocs | Requires system libs |
-
-### Build Instructions
-
-#### Default (Decred Backend)
+## Quick Start
 
 ```bash
-# Pure Go - maximum compatibility
-go build
-# OR explicitly disable CGO
-CGO_ENABLED=0 go build
-```
+# Auto-detect and build optimal backend
+make build_auto
 
-#### High-Performance (Ethereum Backend)
-
-```bash
-# Requires CGO and libsecp256k1
-CGO_ENABLED=1 go build -tags="ethereum_secp256k1"
-
-# macOS (with Homebrew)
-brew install libsecp256k1
-CGO_ENABLED=1 go build -tags="ethereum_secp256k1"
-
-# Ubuntu/Debian
-sudo apt install libsecp256k1-dev
-CGO_ENABLED=1 go build -tags="ethereum_secp256k1"
-```
-
-### Benchmark Results
-
-**Apple M1 Max Results:**
-
-| Operation              | Decred (Pure Go) | Ethereum (libsecp256k1) | Improvement        |
-| ---------------------- | ---------------- | ----------------------- | ------------------ |
-| **ScalarBaseMul**      | 36 μs            | 43 μs                   | Similar            |
-| **ScalarMul**          | 125 μs           | **43 μs**               | **🚀 3x faster**   |
-| **Sign**               | 93 μs            | **36 μs**               | **🚀 2.6x faster** |
-| **Verify**             | 212 μs           | **42 μs**               | **🚀 5x faster**   |
-| **DLEQ Proof Gen**     | 485 ms           | **157 ms**              | **🚀 3x faster**   |
-| **DLEQ Proof Ver**     | 413 ms           | **131 ms**              | **🚀 3.2x faster** |
-| **Parallel ScalarMul** | 18 μs            | **6 μs**                | **🚀 3x faster**   |
-
-**Key Insight:** The Ethereum backend provides **massive improvements for scalar multiplication operations**, which are the bottleneck in ring signature schemes and DLEQ proofs.
-
-Run your own benchmarks:
-
-```bash
-# Compare all backends (consolidated Go tool, no Python/Bash required!)
+# Run benchmarks
 make benchmark_all
 
-# Quick performance report
-make benchmark_report
-
-# Direct usage of the benchmark tool
-go run cmd/benchmark/main.go -compare -duration=5s
+# Run tests
+make test_all
 ```
 
-## Usage
+## Performance
+
+| Operation | Decred (Pure Go) | Ethereum (libsecp256k1) | **Improvement** |
+|-----------|------------------|-------------------------|-----------------|
+| **ScalarMul** | 125 μs | 43 μs | **3x faster** |
+| **ECDSA Sign** | 93 μs | 36 μs | **2.6x faster** |
+| **ECDSA Verify** | 212 μs | 42 μs | **5x faster** |
+| **DLEQ Proof** | 485 ms | 157 ms | **3x faster** |
+
+<details>
+<summary><b>📊 Full Benchmark Results</b></summary>
+
+### Apple M1 Max Results
+
+| Operation | Decred | Ethereum | Improvement |
+|-----------|--------|----------|-------------|
+| ScalarBaseMul | 36 μs | 43 μs | Similar |
+| ScalarMul | 125 μs | 43 μs | 3.0x faster |
+| Sign | 93 μs | 36 μs | 2.6x faster |
+| Verify | 212 μs | 42 μs | 5.0x faster |
+| DLEQ Proof Generation | 485 ms | 157 ms | 3.1x faster |
+| DLEQ Proof Verification | 413 ms | 131 ms | 3.2x faster |
+| Parallel ScalarMul | 18 μs | 6 μs | 3.0x faster |
+
+### Memory Usage
+
+- **Decred:** 136 B/op, 2 allocations
+- **Ethereum:** 336 B/op, 8 allocations (optimization TODO)
+
+### Run Your Own Benchmarks
+
+```bash
+make benchmark_all              # Full comparison
+go run cmd/benchmark/main.go -compare -duration=10s
+```
+
+</details>
+
+## Backend Selection
+
+### Build Commands
+
+```bash
+# Pure Go (Default) - Maximum portability
+CGO_ENABLED=0 go build
+
+# High Performance - Requires libsecp256k1
+CGO_ENABLED=1 go build -tags="ethereum_secp256k1"
+
+# Auto-select optimal backend
+make build_auto
+```
+
+### Installation
+
+<details>
+<summary><b>📦 Installing libsecp256k1</b></summary>
+
+**macOS:**
+```bash
+brew install libsecp256k1
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt install libsecp256k1-dev
+```
+
+**Alpine:**
+```bash
+apk add libsecp256k1-dev
+```
+
+</details>
+
+### When to Use Each Backend
+
+**Decred (Pure Go):**
+- ✅ Cross-compilation
+- ✅ WebAssembly targets
+- ✅ No system dependencies
+- ✅ Excellent baseline performance
+
+**Ethereum (libsecp256k1):**
+- ✅ Production systems
+- ✅ Ring signature workloads
+- ✅ High-throughput operations
+- ✅ 3x performance critical paths
+
+## API Usage
 
 ```go
 import (
@@ -94,71 +126,54 @@ import (
     "github.com/athanorlabs/go-dleq/secp256k1"
 )
 
+// Create curves
 curveA := secp256k1.NewCurve()
 curveB := ed25519.NewCurve()
-x, err := dleq.GenerateSecretForCurves(curveA, curveB)
-if err != nil {
-    panic(err)
-}
 
-proof, err := dleq.NewProof(curveA, curveB, x)
-if err != nil {
-    panic(err)
-}
+// Generate secret
+secret, _ := dleq.GenerateSecretForCurves(curveA, curveB)
 
-err = proof.Verify(curveA, curveB)
-if err != nil {
-    panic(err)
-}
+// Create and verify proof
+proof, _ := dleq.NewProof(curveA, curveB, secret)
+err := proof.Verify(curveA, curveB)
 ```
 
-The API is **100% identical** between backends - simply change your build tags for different performance characteristics.
-
-## Backend Selection Guide
-
-**Choose Decred backend when:**
-
-- ✅ Maximum portability required
-- ✅ CGO dependencies not available
-- ✅ Cross-compilation needed
-- ✅ WebAssembly compilation
-- ✅ Excellent performance is sufficient
-
-**Choose Ethereum backend when:**
-
-- ✅ Maximum performance required
-- ✅ Ring signature workloads
-- ✅ High-throughput DLEQ operations
-- ✅ CGO dependencies available
-- ✅ Production systems with system libs
-
-**Quick Selection:**
-
-```bash
-# Auto-detect and build optimal backend
-make build_auto  # Automatically selects best backend based on environment
-```
+API is identical between backends - just change build tags.
 
 ## Technical Details
 
-**Backend Architecture:**
+<details>
+<summary><b>🔧 Implementation Details</b></summary>
 
-- `secp256k1/curve_decred.go` - Pure Go implementation using Decred secp256k1
-- `secp256k1/curve_ethereum.go` - CGO implementation using go-ethereum/libsecp256k1
-- Build tags ensure only one backend compiles
+### Architecture
 
-**Key Optimizations in Ethereum Backend:**
+- **Backend selection:** Build-time via tags (not runtime)
+- **Files:**
+  - `secp256k1/curve_decred.go` - Pure Go implementation
+  - `secp256k1/curve_ethereum.go` - libsecp256k1 wrapper (build tag: `ethereum_secp256k1`)
 
-- Replaces `secp256k1.ScalarMultNonConst` with `ethsecp256k1.S256().ScalarMult`
-- Replaces `secp256k1.ScalarBaseMultNonConst` with `ethsecp256k1.S256().ScalarBaseMult`
-- Uses libsecp256k1 for signing/verification via `ethsecp256k1.Sign`/`ethsecp256k1.VerifySignature`
-- Maintains API compatibility through careful type conversions
+### Optimizations
 
-**Performance Impact on Shannon SDK:**
-The PATH → Shannon SDK → Ring-go → go-dleq pipeline benefits significantly:
+The Ethereum backend replaces critical operations:
 
-- Ring signature operations: **~3x faster**
-- DLEQ proof operations: **~3x faster**
-- Parallel workloads: **~3x better scaling**
+| Decred (Pure Go) | Ethereum (libsecp256k1) |
+|------------------|-------------------------|
+| `secp256k1.ScalarMultNonConst` | `ethsecp256k1.S256().ScalarMult` |
+| `secp256k1.ScalarBaseMultNonConst` | `ethsecp256k1.S256().ScalarBaseMult` |
+| `ecdsa.SignASN1` | `ethsecp256k1.Sign` |
+| `ecdsa.VerifyASN1` | `ethsecp256k1.VerifySignature` |
 
-This optimization directly improves the **end-to-end performance** of the Shannon SDK crypto stack while maintaining complete API compatibility.
+### Performance TODOs
+
+- `TODO_OPTIMIZE`: Reduce Ethereum backend allocations (8 → 4-6)
+- `TODO_OPTIMIZE`: ScalarBaseMul slower than Decred (43μs vs 36μs)
+- `TODO_IMPROVE`: Replace panics with error returns
+
+### Shannon SDK Impact
+
+The PATH → Shannon SDK → Ring-go → go-dleq pipeline achieves:
+- **Ring signatures:** ~3x faster
+- **DLEQ proofs:** ~3x faster
+- **Parallel ops:** ~3x better scaling
+
+</details>
