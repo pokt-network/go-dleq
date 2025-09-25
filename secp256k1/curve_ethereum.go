@@ -205,8 +205,9 @@ func (*CurveImpl) ScalarBaseMul(s Scalar) Point {
 		panic("invalid scalar; type is not *secp256k1.ScalarImpl")
 	}
 
-	// Convert scalar to 32-byte array
-	scalarBytes := make([]byte, 32)
+	// Convert scalar to 32-byte array using pooled buffer
+	scalarBytes := getBytes32()
+	defer putBytes32(scalarBytes)
 	ss.value.FillBytes(scalarBytes)
 
 	// Use Ethereum's optimized scalar base multiplication
@@ -235,8 +236,9 @@ func (*CurveImpl) ScalarMul(s Scalar, p Point) Point {
 		panic("invalid point; type is not *secp256k1.PointImpl")
 	}
 
-	// Convert scalar to 32-byte array
-	scalarBytes := make([]byte, 32)
+	// Convert scalar to 32-byte array using pooled buffer
+	scalarBytes := getBytes32()
+	defer putBytes32(scalarBytes)
 	ss.value.FillBytes(scalarBytes)
 
 	// Use Ethereum's optimized scalar multiplication
@@ -255,8 +257,9 @@ func (*CurveImpl) Sign(s Scalar, p Point) ([]byte, error) {
 		panic("invalid scalar; type is not *secp256k1.ScalarImpl")
 	}
 
-	// Convert scalar to 32-byte private key
-	privKeyBytes := make([]byte, 32)
+	// Convert scalar to 32-byte private key using pooled buffer
+	privKeyBytes := getBytes32()
+	defer putBytes32(privKeyBytes)
 	ss.value.FillBytes(privKeyBytes)
 
 	// Get message to sign
@@ -269,9 +272,14 @@ func (*CurveImpl) Sign(s Scalar, p Point) ([]byte, error) {
 		return nil, err
 	}
 
-	// Convert to DER format for compatibility
-	r := new(big.Int).SetBytes(sig[:32])
-	s2 := new(big.Int).SetBytes(sig[32:64])
+	// Convert to DER format for compatibility using pooled big.Int
+	r := getBigInt()
+	defer putBigInt(r)
+	r.SetBytes(sig[:32])
+
+	s2 := getBigInt()
+	defer putBigInt(s2)
+	s2.SetBytes(sig[32:64])
 
 	return encodeDER(r, s2), nil
 }
@@ -288,13 +296,15 @@ func (*CurveImpl) Verify(pubkey, msgPoint Point, sig []byte) bool {
 		return false
 	}
 
-	// Convert to Ethereum format (64 bytes)
-	ethSig := make([]byte, 64)
+	// Convert to Ethereum format (64 bytes) using pooled buffer
+	ethSig := getBytes64()
+	defer putBytes64(ethSig)
 	r.FillBytes(ethSig[:32])
 	s.FillBytes(ethSig[32:64])
 
-	// Encode public key
-	pubKeyBytes := make([]byte, 65)
+	// Encode public key using pooled buffer
+	pubKeyBytes := getBytes65()
+	defer putBytes65(pubKeyBytes)
 	pubKeyBytes[0] = 0x04 // uncompressed
 	pp.x.FillBytes(pubKeyBytes[1:33])
 	pp.y.FillBytes(pubKeyBytes[33:65])
@@ -390,7 +400,8 @@ func (s *ScalarImpl) Add(b Scalar) Scalar {
 		panic("invalid scalar; type is not *secp256k1.ScalarImpl")
 	}
 
-	result := new(big.Int).Add(s.value, ss.value)
+	result := getBigInt()
+	result.Add(s.value, ss.value)
 	curve := ethsecp256k1.S256()
 	result.Mod(result, curve.Params().N)
 
@@ -405,7 +416,8 @@ func (s *ScalarImpl) Sub(b Scalar) Scalar {
 		panic("invalid scalar; type is not *secp256k1.ScalarImpl")
 	}
 
-	result := new(big.Int).Sub(s.value, ss.value)
+	result := getBigInt()
+	result.Sub(s.value, ss.value)
 	curve := ethsecp256k1.S256()
 	result.Mod(result, curve.Params().N)
 
@@ -416,7 +428,8 @@ func (s *ScalarImpl) Sub(b Scalar) Scalar {
 
 func (s *ScalarImpl) Negate() Scalar {
 	curve := ethsecp256k1.S256()
-	result := new(big.Int).Sub(curve.Params().N, s.value)
+	result := getBigInt()
+	result.Sub(curve.Params().N, s.value)
 	result.Mod(result, curve.Params().N)
 
 	return &ScalarImpl{
@@ -430,7 +443,8 @@ func (s *ScalarImpl) Mul(b Scalar) Scalar {
 		panic("invalid scalar; type is not *secp256k1.ScalarImpl")
 	}
 
-	result := new(big.Int).Mul(s.value, ss.value)
+	result := getBigInt()
+	result.Mul(s.value, ss.value)
 	curve := ethsecp256k1.S256()
 	result.Mod(result, curve.Params().N)
 
@@ -441,8 +455,10 @@ func (s *ScalarImpl) Mul(b Scalar) Scalar {
 
 func (s *ScalarImpl) Inverse() Scalar {
 	curve := ethsecp256k1.S256()
-	result := new(big.Int).ModInverse(s.value, curve.Params().N)
+	result := getBigInt()
+	result.ModInverse(s.value, curve.Params().N)
 	if result == nil {
+		putBigInt(result) // Return to pool before panicking
 		panic("scalar has no inverse")
 	}
 
