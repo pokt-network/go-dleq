@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/athanorlabs/go-dleq/types"
+	"github.com/pokt-network/go-dleq/types"
 )
 
 type Curve = types.Curve

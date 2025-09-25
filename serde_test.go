@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/athanorlabs/go-dleq/ed25519"
-	"github.com/athanorlabs/go-dleq/secp256k1"
+	"github.com/pokt-network/go-dleq/ed25519"
+	"github.com/pokt-network/go-dleq/secp256k1"
 )
 
 func TestProof_Serde(t *testing.T) {

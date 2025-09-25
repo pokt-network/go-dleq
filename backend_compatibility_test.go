@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/athanorlabs/go-dleq/secp256k1"
+	"github.com/pokt-network/go-dleq/secp256k1"
 )
 
 // TestBackendCompatibility ensures both backends produce identical results

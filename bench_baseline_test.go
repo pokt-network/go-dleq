@@ -3,7 +3,7 @@ package dleq
 import (
 	"testing"
 
-	"github.com/athanorlabs/go-dleq/secp256k1"
+	"github.com/pokt-network/go-dleq/secp256k1"
 )
 
 // BenchmarkScalarBaseMul benchmarks the critical ScalarBaseMul operation

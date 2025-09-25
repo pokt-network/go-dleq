@@ -13,7 +13,7 @@ import (
 	ethsecp256k1 "github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/athanorlabs/go-dleq/types"
+	"github.com/pokt-network/go-dleq/types"
 )
 
 type Curve = types.Curve
