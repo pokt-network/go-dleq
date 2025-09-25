@@ -10,10 +10,10 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/athanorlabs/go-dleq/types"
-
 	ethsecp256k1 "github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/athanorlabs/go-dleq/types"
 )
 
 type Curve = types.Curve

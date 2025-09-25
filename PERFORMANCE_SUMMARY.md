@@ -4,9 +4,19 @@
 
 - [Overview](#overview)
 - [Performance Achievements](#performance-achievements)
+  - [Benchmark Results (Apple M1 Max)](#benchmark-results-apple-m1-max)
+  - [Key Insights](#key-insights)
 - [Architecture](#architecture)
+  - [Backend Selection (Build-Time)](#backend-selection-build-time)
+  - [File Structure](#file-structure)
+  - [Key Optimizations](#key-optimizations)
 - [Usage](#usage)
+  - [Quick Start](#quick-start)
+  - [API Compatibility](#api-compatibility)
 - [Integration Impact](#integration-impact)
+  - [Shannon SDK Integration](#shannon-sdk-integration)
+  - [Expected End-to-End Improvements](#expected-end-to-end-improvements)
+  - [Production Readiness](#production-readiness)
 
 ## Overview
 
@@ -18,14 +28,14 @@ Successfully implemented a high-performance Ethereum secp256k1 backend for go-dl
 
 ### Benchmark Results (Apple M1 Max)
 
-| Operation | Decred (Pure Go) | Ethereum (libsecp256k1) | **Improvement** |
-|-----------|------------------|--------------------------|-----------------|
-| **ScalarMul** | 127 μs | **42 μs** | **🚀 3.0x faster** |
-| **Sign** | 92 μs | **35 μs** | **🚀 2.6x faster** |
-| **Verify** | 206 μs | **41 μs** | **🚀 5.0x faster** |
-| **DLEQ Proof Generation** | 479 ms | **153 ms** | **🚀 3.1x faster** |
-| **DLEQ Proof Verification** | 401 ms | **126 ms** | **🚀 3.2x faster** |
-| **Parallel ScalarMul** | 15.5 μs | **5.7 μs** | **🚀 2.7x faster** |
+| Operation                   | Decred (Pure Go) | Ethereum (libsecp256k1) | **Improvement**    |
+| --------------------------- | ---------------- | ----------------------- | ------------------ |
+| **ScalarMul**               | 127 μs           | **42 μs**               | **🚀 3.0x faster** |
+| **Sign**                    | 92 μs            | **35 μs**               | **🚀 2.6x faster** |
+| **Verify**                  | 206 μs           | **41 μs**               | **🚀 5.0x faster** |
+| **DLEQ Proof Generation**   | 479 ms           | **153 ms**              | **🚀 3.1x faster** |
+| **DLEQ Proof Verification** | 401 ms           | **126 ms**              | **🚀 3.2x faster** |
+| **Parallel ScalarMul**      | 15.5 μs          | **5.7 μs**              | **🚀 2.7x faster** |
 
 ### Key Insights
 

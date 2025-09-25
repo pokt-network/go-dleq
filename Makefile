@@ -49,23 +49,12 @@ test_all: ## Run all tests on both backends
 .PHONY: benchmark_all
 benchmark_all: ## Run comprehensive benchmarks comparing both backends
 	@echo "🔬 Running comprehensive go-dleq backend comparison..."
-	@./benchmark_runner.sh
+	@go run cmd/benchmark/main.go -compare -duration=3s
 
 .PHONY: benchmark_report
-benchmark_report: ## Generate a report of the benchmarks
+benchmark_report: ## Generate a quick performance report
 	@echo "🔬 Generating benchmark performance report..."
-	@echo ""
-	@echo "Testing Decred Backend (Pure Go)" > .benchmark_temp.txt
-	@go test -bench=BenchmarkComparison -benchmem -run=^$$ -benchtime=1s 2>/dev/null >> .benchmark_temp.txt
-	@echo "" >> .benchmark_temp.txt
-	@if command -v gcc >/dev/null 2>&1; then \
-		echo "Testing Ethereum Backend (libsecp256k1)" >> .benchmark_temp.txt; \
-		CGO_ENABLED=1 go test -tags=ethereum_secp256k1 -bench=BenchmarkComparison -benchmem -run=^$$ -benchtime=1s 2>/dev/null >> .benchmark_temp.txt; \
-	else \
-		echo "❌ Ethereum backend not available (CGO required)" >> .benchmark_temp.txt; \
-	fi
-	@python3 format_benchmark_terminal.py < .benchmark_temp.txt
-	@rm -f .benchmark_temp.txt
+	@go run cmd/benchmark/main.go -report -duration=1s
 
 #####################
 ### Build Targets ###
