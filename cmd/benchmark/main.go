@@ -1,17 +1,3 @@
-// Consolidated benchmark tool for go-dleq backend comparison
-//
-// This single Go program replaces three separate files:
-//   - benchmark_runner.sh (Bash script)
-//   - format_benchmark.py (Python formatter)
-//   - format_benchmark_terminal.py (Python terminal formatter)
-//
-// Benefits of consolidation:
-//   - No Python dependency required
-//   - Single portable Go binary
-//   - Easier to maintain and test
-//   - Better cross-platform support
-//   - Consistent formatting across environments
-//
 // Usage:
 //   go run cmd/benchmark/main.go -compare         # Full comparison
 //   go run cmd/benchmark/main.go -report          # Quick report
@@ -20,6 +6,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -39,11 +26,11 @@ const (
 )
 
 type BenchmarkResult struct {
-	Name      string
-	NsOp      float64
-	BytesOp   int
-	AllocsOp  int
-	Backend   string
+	Name     string
+	NsOp     float64
+	BytesOp  int
+	AllocsOp int
+	Backend  string
 }
 
 func main() {
@@ -72,6 +59,16 @@ func runComparison(duration string) {
 	// Check CGO availability
 	if !checkCGO() {
 		fmt.Printf("%s⚠️  CGO not available. Only Decred backend will be tested.%s\n\n", colorYellow, colorReset)
+	}
+
+	// Run compatibility verification first
+	if checkCGO() {
+		fmt.Printf("%s🔍 Verifying Backend Compatibility%s\n", colorBlue, colorReset)
+		if !runCompatibilityTest() {
+			fmt.Printf("%s❌ Backend compatibility test failed!%s\n", colorRed, colorReset)
+			os.Exit(1)
+		}
+		fmt.Printf("%s✅ Backend compatibility verified%s\n\n", colorGreen, colorReset)
 	}
 
 	// Run Decred backend benchmarks
@@ -223,4 +220,74 @@ func formatTime(ns float64) string {
 	default:
 		return fmt.Sprintf("%.0f ns", ns)
 	}
+}
+
+func runCompatibilityTest() bool {
+	fmt.Println("  • Testing Decred backend produces consistent results...")
+
+	// Run Decred backend compatibility test
+	decredCmd := exec.Command("go", "test", "-v", "-run", "TestBackendCompatibility")
+	decredCmd.Env = append(os.Environ(), "CGO_ENABLED=0")
+	decredOut, err := decredCmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("%s    ❌ Decred backend test failed: %v%s\n", colorRed, err, colorReset)
+		fmt.Printf("%s%s%s\n", colorRed, string(decredOut), colorReset)
+		return false
+	}
+
+	fmt.Println("  • Testing Ethereum backend produces consistent results...")
+
+	// Run Ethereum backend compatibility test
+	ethCmd := exec.Command("go", "test", "-tags=ethereum_secp256k1", "-v", "-run", "TestBackendCompatibility")
+	ethCmd.Env = append(os.Environ(), "CGO_ENABLED=1")
+	ethOut, err := ethCmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("%s    ❌ Ethereum backend test failed: %v%s\n", colorRed, err, colorReset)
+		fmt.Printf("%s%s%s\n", colorRed, string(ethOut), colorReset)
+		return false
+	}
+
+	// Parse outputs to verify both backends produce same deterministic results
+	fmt.Println("  • Comparing deterministic outputs...")
+
+	decredValues := extractDeterministicValues(string(decredOut))
+	ethValues := extractDeterministicValues(string(ethOut))
+
+	if len(decredValues) == 0 || len(ethValues) == 0 {
+		fmt.Printf("%s    ❌ Could not extract deterministic values from test outputs%s\n", colorRed, colorReset)
+		return false
+	}
+
+	// Compare extracted values
+	for key, decredValue := range decredValues {
+		if ethValue, exists := ethValues[key]; !exists || ethValue != decredValue {
+			fmt.Printf("%s    ❌ Backends produce different outputs for %s%s\n", colorRed, key, colorReset)
+			fmt.Printf("      Decred:   %s\n", decredValue)
+			fmt.Printf("      Ethereum: %s\n", ethValue)
+			return false
+		}
+	}
+
+	fmt.Printf("    ✅ Both backends produce identical deterministic outputs\n")
+	return true
+}
+
+func extractDeterministicValues(output string) map[string]string {
+	values := make(map[string]string)
+	scanner := bufio.NewScanner(strings.NewReader(output))
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "DETERMINISTIC_") {
+			parts := strings.SplitN(line, "DETERMINISTIC_", 2)
+			if len(parts) == 2 {
+				keyValue := strings.SplitN(parts[1], "=", 2)
+				if len(keyValue) == 2 {
+					values[keyValue[0]] = keyValue[1]
+				}
+			}
+		}
+	}
+
+	return values
 }

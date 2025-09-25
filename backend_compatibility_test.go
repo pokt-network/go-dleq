@@ -44,6 +44,15 @@ func TestBackendCompatibility(t *testing.T) {
 		t.Error("Signature verification failed")
 	}
 
+	// Test deterministic scalar operations
+	scalar2 := curve.ScalarFromInt(2)
+	scalarSum := privKey.Add(scalar2)
+	scalarProduct := privKey.Mul(scalar2)
+
+	// Test deterministic point operations
+	point2 := curve.ScalarBaseMul(scalar2)
+	pointProduct := curve.ScalarMul(scalar2, curve.BasePoint())
+
 	// Test DLEQ proof
 	curveA := curve
 	curveB := secp256k1.NewCurve()
@@ -62,6 +71,18 @@ func TestBackendCompatibility(t *testing.T) {
 		t.Errorf("Proof verification failed: %v", err)
 	}
 
+	// Output deterministic values for cross-backend comparison (exclude non-deterministic signatures)
+	pubKeyHex := hex.EncodeToString(pubKey.Encode())
+	scalarSumHex := hex.EncodeToString(scalarSum.Encode())
+	scalarProductHex := hex.EncodeToString(scalarProduct.Encode())
+	point2Hex := hex.EncodeToString(point2.Encode())
+	pointProductHex := hex.EncodeToString(pointProduct.Encode())
+
+	t.Logf("DETERMINISTIC_PUBKEY=%s", pubKeyHex)
+	t.Logf("DETERMINISTIC_SCALAR_SUM=%s", scalarSumHex)
+	t.Logf("DETERMINISTIC_SCALAR_PRODUCT=%s", scalarProductHex)
+	t.Logf("DETERMINISTIC_POINT2=%s", point2Hex)
+	t.Logf("DETERMINISTIC_POINT_PRODUCT=%s", pointProductHex)
 	t.Log("✅ Backend compatibility verified - signatures and proofs work correctly")
 }
 
