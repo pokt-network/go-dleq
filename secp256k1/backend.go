@@ -14,10 +14,13 @@ package secp256k1
 //
 // Ethereum backend (build tag: ethereum_secp256k1):
 // - Requires CGO and libsecp256k1
-// - ~50% faster signing operations
-// - ~80% faster verification operations
-// - Fewer memory allocations
+// - ~3x faster ScalarMul operations (127μs → 42μs)
+// - ~2.6x faster signing operations (93μs → 36μs)
+// - ~5x faster verification operations (212μs → 42μs)
+// - Higher memory usage (8 allocs vs 2, needs optimization)
 // - Production-ready (Bitcoin Core implementation)
+//
+// TODO_OPTIMIZE: Reduce Ethereum backend allocations from 8 to 4-6 by pooling big.Int objects
 
 // Common backend operations that both implementations provide:
 //

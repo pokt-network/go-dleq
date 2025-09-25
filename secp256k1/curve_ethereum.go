@@ -31,6 +31,7 @@ type CurveImpl struct {
 }
 
 func NewCurve() Curve {
+	// TODO_READABILITY: Consider using a more readable format for the order constant
 	orderBytes, err := hex.DecodeString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141")
 	if err != nil {
 		panic(err)
@@ -200,6 +201,7 @@ func (c *CurveImpl) HashToScalar(in []byte) (Scalar, error) {
 func (*CurveImpl) ScalarBaseMul(s Scalar) Point {
 	ss, ok := s.(*ScalarImpl)
 	if !ok {
+		// TODO_IMPROVE: Consider returning error instead of panic for better error handling
 		panic("invalid scalar; type is not *secp256k1.ScalarImpl")
 	}
 
@@ -208,6 +210,8 @@ func (*CurveImpl) ScalarBaseMul(s Scalar) Point {
 	ss.value.FillBytes(scalarBytes)
 
 	// Use Ethereum's optimized scalar base multiplication
+	// TODO_OPTIMIZE: ScalarBaseMul is currently slower than Decred (43μs vs 36μs)
+	// Consider using direct libsecp256k1 calls instead of go-ethereum wrapper
 	x, y := ethsecp256k1.S256().ScalarBaseMult(scalarBytes)
 
 	return &PointImpl{
@@ -217,14 +221,17 @@ func (*CurveImpl) ScalarBaseMul(s Scalar) Point {
 }
 
 // ScalarMul uses go-ethereum's optimized scalar multiplication
+// TODO_IMPROVE: Add nil checks for s and p parameters to prevent runtime panics
 func (*CurveImpl) ScalarMul(s Scalar, p Point) Point {
 	ss, ok := s.(*ScalarImpl)
 	if !ok {
+		// TODO_IMPROVE: Consider returning error instead of panic for better error handling
 		panic("invalid scalar; type is not *secp256k1.ScalarImpl")
 	}
 
 	pp, ok := p.(*PointImpl)
 	if !ok {
+		// TODO_IMPROVE: Consider returning error instead of panic for better error handling
 		panic("invalid point; type is not *secp256k1.PointImpl")
 	}
 

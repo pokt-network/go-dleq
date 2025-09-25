@@ -26,6 +26,7 @@ else
 fi
 
 # Function to run benchmarks
+# TODO_IMPROVE: Add option to export results to JSON/CSV for tracking performance over time
 run_benchmark() {
     local backend=$1
     local build_flags=$2

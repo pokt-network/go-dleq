@@ -18,7 +18,7 @@ help: ## Prints all the targets in all the Makefiles
 	@grep -h -E '^benchmark_(all|report):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-58s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "\033[1;34m=== 🔨 Building ===\033[0m"
-	@grep -h -E '^(build_fast|build_portable|clean_builds):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-58s\033[0m %s\n", $$1, $$2}'
+	@grep -h -E '^(build_auto|build_fast|build_portable|clean_builds):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-58s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "\033[1;34m=== 🧹 Code Quality ===\033[0m"
 	@grep -h -E '^go_lint_and_format:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-58s\033[0m %s\n", $$1, $$2}'
@@ -70,6 +70,17 @@ benchmark_report: ## Generate a report of the benchmarks
 #####################
 ### Build Targets ###
 #####################
+
+.PHONY: build_auto
+build_auto: ## Auto-detect and build optimal backend based on environment
+	@echo "🤖 Auto-detecting optimal backend..."
+	@if command -v gcc >/dev/null 2>&1; then \
+		echo "✨ CGO available - selecting Ethereum backend for maximum performance"; \
+		$(MAKE) build_fast; \
+	else \
+		echo "🌍 CGO not available - selecting Decred backend for portability"; \
+		$(MAKE) build_portable; \
+	fi
 
 .PHONY: build_fast
 build_fast: ## Build with Ethereum backend (3x faster operations, requires CGO)

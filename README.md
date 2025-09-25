@@ -124,6 +124,12 @@ The API is **100% identical** between backends - simply change your build tags f
 - ✅ CGO dependencies available
 - ✅ Production systems with system libs
 
+**Quick Selection:**
+```bash
+# Auto-detect and build optimal backend
+make build_auto  # Automatically selects best backend based on environment
+```
+
 ## Technical Details
 
 **Backend Architecture:**
