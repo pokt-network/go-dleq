@@ -8,6 +8,3 @@ package secp256k1
 // Build commands:
 //   CGO_ENABLED=0 go build                                    # Decred backend
 //   CGO_ENABLED=1 go build -tags="ethereum_secp256k1"        # Ethereum backend
-//
-// Memory optimization: Reduced Ethereum backend allocations using sync.Pool
-// Achievement: ~328 B/op (down from 336 B/op) with pooled buffers in hot paths
