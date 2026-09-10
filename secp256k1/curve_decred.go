@@ -234,8 +234,8 @@ func (*CurveImpl) Verify(pubkey, msgPoint Point, sig []byte) bool {
 		panic("invalid point; type is not *secp256k1.PointImpl")
 	}
 
-	pp.inner.ToAffine()
-	pub := secp256k1.NewPublicKey(&pp.inner.X, &pp.inner.Y)
+	a := pp.affine()
+	pub := secp256k1.NewPublicKey(&a.X, &a.Y)
 
 	msg := msgPoint.Encode()
 	hash := sha256.Sum256(msg)
@@ -323,6 +323,9 @@ type PointImpl struct {
 }
 
 func NewPointFromCoordinates(x, y secp256k1.FieldVal) *PointImpl {
+	// Keep the invariant that inner is affine AND normalized (see affine).
+	x.Normalize()
+	y.Normalize()
 	one := new(secp256k1.FieldVal).SetInt(1)
 	return &PointImpl{
 		inner: &secp256k1.JacobianPoint{
@@ -389,17 +392,34 @@ func (p *PointImpl) ScalarMul(s Scalar) Point {
 	}
 }
 
+// affine returns p's coordinates in affine, normalized form WITHOUT writing to
+// p. Every PointImpl this package constructs is already affine and normalized
+// (every constructor ends in ToAffine or NewPointFromCoordinates), so this is a
+// read-only fast path; the copy only runs if that invariant is ever broken.
+//
+// Read-only matters: points are shared across goroutines (e.g. ring members'
+// public keys), and an in-place ToAffine from a reader is a data race that
+// can tear another reader's view of the coordinates.
+func (p *PointImpl) affine() *secp256k1.JacobianPoint {
+	if p.inner.Z.IsOne() {
+		return p.inner
+	}
+	a := *p.inner
+	a.ToAffine()
+	return &a
+}
+
 func (p *PointImpl) Encode() []byte {
-	p.inner.ToAffine()
-	return secp256k1.NewPublicKey(&p.inner.X, &p.inner.Y).SerializeCompressed()
+	a := p.affine()
+	return secp256k1.NewPublicKey(&a.X, &a.Y).SerializeCompressed()
 }
 
 func (p *PointImpl) IsZero() bool {
 	zeroFieldVal := new(secp256k1.FieldVal).SetInt(0)
 	zero := secp256k1.NewPublicKey(zeroFieldVal, zeroFieldVal)
 
-	p.inner.ToAffine()
-	pub := secp256k1.NewPublicKey(&p.inner.X, &p.inner.Y)
+	a := p.affine()
+	pub := secp256k1.NewPublicKey(&a.X, &a.Y)
 	return pub.IsEqual(zero)
 }
 
@@ -409,11 +429,11 @@ func (p *PointImpl) Equals(other Point) bool {
 		panic("invalid point; type is not *secp256k1.PointImpl")
 	}
 
-	p.inner.ToAffine()
-	ppub := secp256k1.NewPublicKey(&p.inner.X, &p.inner.Y)
+	a := p.affine()
+	ppub := secp256k1.NewPublicKey(&a.X, &a.Y)
 
-	pp.inner.ToAffine()
-	otherPub := secp256k1.NewPublicKey(&pp.inner.X, &pp.inner.Y)
+	b := pp.affine()
+	otherPub := secp256k1.NewPublicKey(&b.X, &b.Y)
 
 	return ppub.IsEqual(otherPub)
 }
