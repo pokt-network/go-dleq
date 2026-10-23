@@ -76,3 +76,59 @@ func TestProveAndVerify(t *testing.T) {
 	err = proof.Verify(curveA, curveB)
 	require.NoError(t, err)
 }
+
+func powerOfTwo(curve Curve, n int) Scalar {
+	p := curve.ScalarFromInt(1)
+	two := curve.ScalarFromInt(2)
+	for i := 0; i < n; i++ {
+		p = p.Mul(two)
+	}
+	return p
+}
+
+func TestVerifyRejectsExtraBitProof(t *testing.T) {
+	curveA := secp256k1.NewCurve()
+	curveB := ed25519.NewCurve()
+	x, err := GenerateSecretForCurves(curveA, curveB)
+	require.NoError(t, err)
+	proof, err := NewProof(curveA, curveB, x)
+	require.NoError(t, err)
+
+	bits := int(min(curveA.BitSize(), curveB.BitSize()))
+	dA := curveA.ScalarFromInt(1)
+	dB := curveB.ScalarFromInt(7)
+	proof.proofs = append(proof.proofs, bitProof{
+		commitmentA: commitment{commitment: curveA.ScalarBaseMul(dA.Mul(powerOfTwo(curveA, bits).Inverse()))},
+		commitmentB: commitment{commitment: curveB.ScalarBaseMul(dB.Mul(powerOfTwo(curveB, bits).Inverse()))},
+		ringSig:     proof.proofs[0].ringSig,
+	})
+	xA := curveA.ScalarFromBytes(x).Add(dA)
+	xB := curveB.ScalarFromBytes(x).Add(dB)
+	proof.CommitmentA = curveA.ScalarBaseMul(xA)
+	proof.CommitmentB = curveB.ScalarBaseMul(xB)
+	proof.signatureA.inner, err = curveA.Sign(xA, proof.CommitmentA)
+	require.NoError(t, err)
+	proof.signatureB.inner, err = curveB.Sign(xB, proof.CommitmentB)
+	require.NoError(t, err)
+
+	var decoded Proof
+	require.NoError(t, decoded.Deserialize(curveA, curveB, proof.Serialize()))
+	require.Error(t, decoded.Verify(curveA, curveB))
+}
+
+func TestVerifyRejectsShortProof(t *testing.T) {
+	curveA := secp256k1.NewCurve()
+	curveB := ed25519.NewCurve()
+	x, err := GenerateSecretForCurves(curveA, curveB)
+	require.NoError(t, err)
+	proof, err := NewProof(curveA, curveB, x)
+	require.NoError(t, err)
+
+	for _, n := range []int{0, 1, 10} {
+		short := *proof
+		short.proofs = proof.proofs[:n]
+		require.NotPanics(t, func() {
+			require.Error(t, short.Verify(curveA, curveB))
+		})
+	}
+}
