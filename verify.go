@@ -8,6 +8,11 @@ import (
 // Verify verifies the proof is valid against the given curves.
 // TODO: encode curves into proof somehow?
 func (p *Proof) Verify(curveA, curveB Curve) error {
+	bits := min(curveA.BitSize(), curveB.BitSize())
+	if uint64(len(p.proofs)) != bits {
+		return fmt.Errorf("invalid proof: %d bit proofs, want %d", len(p.proofs), bits)
+	}
+
 	commitmentsA := make([]commitment, len(p.proofs))
 	for i := range commitmentsA {
 		commitmentsA[i] = p.proofs[i].commitmentA
@@ -40,7 +45,6 @@ func (p *Proof) Verify(curveA, curveB Curve) error {
 	}
 
 	// now calculate challenges and verify
-	bits := min(curveA.BitSize(), curveB.BitSize())
 	for i := uint64(0); i < bits; i++ {
 		proof := p.proofs[i]
 
